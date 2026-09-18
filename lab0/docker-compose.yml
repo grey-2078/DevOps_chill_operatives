@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  glitch_postgres:
+    image: postgres:15-alpine
+    container_name: glitch_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - glitch_data:/var/lib/postgresql/data
+    healthcheck:
+        test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
+
+  glitch_app:
+    build: .
+    container_name: glitch_web_app
+    restart: always
+    ports:
+      - "8501:8501" # Пробрасываем порт Streamlit наружу
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # ВАЖНО: В качестве хоста БД в коде используйте имя сервиса: glitch_postgres
+      - POSTGRES_HOST=glitch_postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      glitch_postgres:
+        condition: service_healthy # Приложение запустится только после полной готовности базы
+
+volumes:
+  glitch_data:
