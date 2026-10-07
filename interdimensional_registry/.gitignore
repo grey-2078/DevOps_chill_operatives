@@ -1,0 +1,17 @@
+.env
+
+nginx/.htpasswd
+nginx/ssl/*.crt
+nginx/ssl/*.key
+
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
