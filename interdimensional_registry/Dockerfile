@@ -1,18 +1,25 @@
-# 1. Используем официальный легкий образ Python
-FROM python:3.10-slim
+FROM python:3.10-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
-# 2. Устанавливаем рабочую директорию
+FROM python:3.10-slim
 WORKDIR /app
 
-# 3. Копируем и устанавливаем зависимости
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y libpq-dev gcc curl && rm -rf /var/lib/apt/lists/*
 
-# 4. Копируем все файлы проекта
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+COPY --from=builder /app/wheels /wheels
+COPY requirements.txt .
+RUN pip install --no-cache /wheels/*
+
 COPY . .
 
-# 5. Открываем порты для FastAPI (8000) и Streamlit (8501)
-EXPOSE 8000 8501
+# ����� HEALTHCHECK: ��������� ���� 8501 (Streamlit), � �� 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8501/ || exit 1
 
-# 6. Запускаем одновременно FastAPI и Streamlit
-CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port 8000 & streamlit run app.py --server.port=8501 --server.address=0.0.0.0"]
+USER appuser
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501"]

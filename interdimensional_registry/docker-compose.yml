@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # 1. База данных PostgreSQL
   glitch_postgres:
     image: postgres:15-alpine
     container_name: glitch_postgres_db
@@ -14,15 +11,18 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - glitch_data:/var/lib/postgresql/data
+    networks:
+      - back_net
     healthcheck:
-      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 2. Первый инстанс бэкенда
   backend1:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: glitch_backend_1
     restart: always
     environment:
@@ -35,10 +35,14 @@ services:
     depends_on:
       glitch_postgres:
         condition: service_healthy
+    networks:
+      - back_net
+      - front_net
 
-  # 3. Второй инстанс бэкенда
   backend2:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: glitch_backend_2
     restart: always
     environment:
@@ -51,8 +55,10 @@ services:
     depends_on:
       glitch_postgres:
         condition: service_healthy
+    networks:
+      - back_net
+      - front_net
 
-  # 4. Nginx (Балансировщик и SSL-терминатор)
   nginx:
     image: nginx:latest
     container_name: glitch_nginx
@@ -69,6 +75,12 @@ services:
     depends_on:
       - backend1
       - backend2
+    networks:
+      - front_net
 
 volumes:
   glitch_data:
+
+networks:
+  front_net:
+  back_net:
