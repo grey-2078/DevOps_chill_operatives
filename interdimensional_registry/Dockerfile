@@ -16,7 +16,7 @@ RUN pip install --no-cache /wheels/*
 
 COPY . .
 
-# Умный HEALTHCHECK: проверяем порт 8501 (Streamlit), а не 8000
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8501/ || exit 1
 
