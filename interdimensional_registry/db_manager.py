@@ -48,7 +48,7 @@ def add_glitch(culprit: str, dimension: str, severity: str):
                 cur.execute(query, (culprit, dimension, severity))
                 result = cur.fetchone()
                 if result:
-                    glitch_id = result[0]  # Извлекаем чистое число ID из кортежа (например, 1 вместо (1,))
+                    glitch_id = result[0]
                     conn.commit()
                     return glitch_id
                 return None

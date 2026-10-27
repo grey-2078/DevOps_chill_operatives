@@ -2,41 +2,34 @@ import os
 import db_manager
 import streamlit as st
 
-# Получаем идентификатор текущего бэкенда из переменной окружения
 SERVER_ID = os.getenv("SERVER_ID", "standalone-instance")
 
-# Настройка страницы (вкладка браузера)
 st.set_page_config(
     page_title="Реестр Межпространственных Недоразумений",
     page_icon="🪐",
     layout="wide",
 )
 
-# Инициализируем базу данных при первом запуске
 if "db_initialized" not in st.session_state:
   db_manager.init_db()
   st.session_state["db_initialized"] = True
 
-# Шапка сайта
 st.title("🪐 ЕДИНЫЙ РЕЕСТР МЕЖПРОСТРАНСТВЕННЫХ НЕДОРАЗУМЕНИЙ")
 st.caption(
     f"Бюрократический контроль над мультивселенной | 🖥️ **Инстанс: {SERVER_ID}**"
 )
 
-# Отображение инстанса в боковой панели
 st.sidebar.title("Информация об узле")
 st.sidebar.info(f"Текущий бэкенд: **{SERVER_ID}**")
 
-# Разделение интерфейса на две вкладки (Просмотр и Добавление)
 tab_view, tab_add = st.tabs(
     ["📜 Текущие аномалии", "✍️ Протоколирование инцидента"]
 )
 
-# --- ВКЛАДКА 1: ПРОСМОТР РЕЕСТРА ---
+# ПРОСМОТР РЕЕСТРА
 with tab_view:
   st.subheader("🗄 Текущие аномалии в мультивселенной")
 
-  # Кнопка принудительного обновления данных
   if st.button("🔄 Обновить данные", type="secondary"):
     st.rerun()
 
@@ -45,7 +38,6 @@ with tab_view:
   if not records:
     st.warning("🌌 Реестр пуст. Континуум подозрительно стабилен...")
   else:
-    # Формируем структуру таблицы для отображения
     table_data = []
     for row in records:
       g_id, culprit, dimension, severity, fine, status = row
@@ -58,14 +50,12 @@ with tab_view:
           "Статус дела": status if status else "—",
       })
 
-    # Красивый интерактивный вывод таблицы с поиском и сортировкой
     st.dataframe(table_data, use_container_width=True, hide_index=True)
 
-# --- ВКЛАДКА 2: РЕГИСТРАЦИЯ АНОМАЛИИ ---
+# РЕГИСТРАЦИЯ АНОМАЛИИ
 with tab_add:
   st.subheader("📝 Протоколирование нового инцидента")
 
-  # Создаем форму, чтобы данные отправлялись одной кнопкой
   with st.form("glitch_form", clear_on_submit=True):
     culprit = st.text_input(
         "Кто виноват?",
@@ -101,14 +91,11 @@ with tab_add:
       if not culprit or not dimension or not fine_cost:
         st.error("⚠️ Пожалуйста, заполните все поля протокола!")
       else:
-        # 1. Сохраняем аномалию в базу
         glitch_id = db_manager.add_glitch(culprit, dimension, severity)
 
         if glitch_id:
-          # 2. Привязываем наказание
           if db_manager.issue_bureaucratic_action(glitch_id, fine_cost):
             st.success(f"✅ Протокол №{glitch_id} успешно зарегистрирован!")
-            # Предлагаем переключиться на вкладку просмотра
             st.info(
                 "Перейдите на вкладку 'Текущие аномалии', чтобы увидеть запись."
             )

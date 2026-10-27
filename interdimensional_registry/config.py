@@ -3,8 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Если переменная POSTGRES_HOST передана (из docker-compose), берем её.
-# Если её нет (локальный запуск без Docker), откатываемся на "localhost".
 db_host = os.getenv("POSTGRES_HOST", "localhost")
 
 DB_CONFIG = {
