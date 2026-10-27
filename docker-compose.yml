@@ -1,0 +1,108 @@
+services:
+  # 1. Скомпилированное React-приложение (Единый Реестр и Стенд аудита)
+  react_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: glitch_react_ui
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - front_net
+    healthcheck:
+      test: wget -qO- http://localhost:3000/ || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # 2. База данных PostgreSQL 15
+  glitch_postgres:
+    image: postgres:15-alpine
+    container_name: glitch_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-glitch_db}
+      POSTGRES_USER: ${POSTGRES_USER:-glitch_master}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cosmic_password_123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - glitch_data:/var/lib/postgresql/data
+    networks:
+      - back_net
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER:-glitch_master} -d ${POSTGRES_DB:-glitch_db}
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Бэкенд 1 (Python / Streamlit / FastAPI)
+  backend1:
+    build: 
+      context: ./interdimensional_registry
+      dockerfile: Dockerfile
+    container_name: glitch_backend_1
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-glitch_db}
+      - POSTGRES_USER=${POSTGRES_USER:-glitch_master}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cosmic_password_123}
+      - POSTGRES_HOST=glitch_postgres
+      - POSTGRES_PORT=5432
+      - SERVER_ID=backend-node-1
+    depends_on:
+      glitch_postgres:
+        condition: service_healthy
+    networks:
+      - back_net
+      - front_net
+
+  # 4. Бэкенд 2 (Python / Streamlit / FastAPI)
+  backend2:
+    build: 
+      context: ./interdimensional_registry
+      dockerfile: Dockerfile
+    container_name: glitch_backend_2
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-glitch_db}
+      - POSTGRES_USER=${POSTGRES_USER:-glitch_master}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cosmic_password_123}
+      - POSTGRES_HOST=glitch_postgres
+      - POSTGRES_PORT=5432
+      - SERVER_ID=backend-node-2
+    depends_on:
+      glitch_postgres:
+        condition: service_healthy
+    networks:
+      - back_net
+      - front_net
+
+  # 5. Обратный прокси NGINX (SSL, Балансировка и защита)
+  nginx:
+    image: nginx:latest
+    container_name: glitch_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./interdimensional_registry/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./interdimensional_registry/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./interdimensional_registry/nginx/ssl:/etc/nginx/ssl:ro
+      - ./interdimensional_registry/nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ./interdimensional_registry/nginx/html:/usr/share/nginx/html:ro
+    depends_on:
+      - backend1
+      - backend2
+      - react_frontend
+    networks:
+      - front_net
+
+volumes:
+  glitch_data:
+
+networks:
+  front_net:
+  back_net:
